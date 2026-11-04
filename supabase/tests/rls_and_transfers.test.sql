@@ -1,6 +1,6 @@
 begin;
 
-select plan(25);
+select plan(27);
 
 insert into auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
 values
@@ -15,7 +15,24 @@ values
   ('10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000001', 'liability', 'paylater', 'SPayLater', 0, '2026-01-01'),
   ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', 'asset', 'bank', 'BCA-B', 500000, '2026-01-01');
 
-select ok((select count(*) >= 13 from public.categories where user_id = '00000000-0000-0000-0000-000000000001'), 'new users receive default categories from a database trigger');
+select is((select count(*) from public.categories where user_id = '00000000-0000-0000-0000-000000000001'), 17::bigint, 'new users receive all 17 canonical default categories');
+select is(
+  (select count(*) from public.categories
+   where user_id = '00000000-0000-0000-0000-000000000001'
+     and (
+       (name in ('Gaji', 'Bonus', 'Jualan') and type = 'income' and category_group = 'income_group')
+       or (name in ('Kiriman/Hadiah', 'Refund', 'Lain-lain') and type = 'income' and category_group = 'non_income')
+       or (name in ('Makan & Minum', 'Transport', 'Tagihan', 'Belanja Harian', 'Kesehatan', 'Pendidikan', 'Hiburan', 'Biaya Admin', 'Bunga & Biaya', 'Tak tercatat', 'Lain-lain') and type = 'expense' and category_group is null)
+     )),
+  17::bigint,
+  'seeded income and expense categories match their expected groups'
+);
+select is(
+  (select count(*) from public.categories where user_id = '00000000-0000-0000-0000-000000000001'
+   and ((name = 'Belanja' and type = 'expense') or (name = 'Pendapatan Lain' and type = 'income'))),
+  0::bigint,
+  'merged legacy category names are not seeded for new users'
+);
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
@@ -72,9 +89,11 @@ select is(
   3000::bigint,
   'transfer fee transaction mirrors the edited fee'
 );
-select lives_ok(
+select throws_ok(
   format('update public.transactions set amount = 9999 where transfer_id = %L::uuid', current_setting('pocketly.test_transfer_id')),
-  'a transfer fee transaction cannot be edited directly'
+  '42501',
+  'Biaya diatur lewat transfernya',
+  'a transfer fee transaction rejects direct edits with guidance'
 );
 select is(
   (select amount from public.transactions where transfer_id = current_setting('pocketly.test_transfer_id')::uuid),
