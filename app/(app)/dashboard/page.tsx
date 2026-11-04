@@ -2,11 +2,9 @@ import Link from "next/link";
 import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, Plus, Wallet } from "lucide-react";
 import { getDashboardTotals } from "@/lib/finance/balances";
 import { formatRupiah } from "@/lib/finance/format";
-import type { AccountType } from "@/lib/finance/types";
+import type { WalletBalanceRow } from "@/lib/finance/types";
 import { getAuthenticatedUser } from "@/lib/supabase/server";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/accounts/presets";
-
-type WalletRow = { account_id: string; kind: "asset" | "liability"; type: AccountType; balance: number; name: string; is_archived: boolean; opening_balance: number };
 
 export default async function DashboardPage() {
   const { supabase, user } = await getAuthenticatedUser();
@@ -15,16 +13,16 @@ export default async function DashboardPage() {
     supabase.from("wallet_balances").select("*").eq("user_id", user.id).eq("is_archived", false).order("created_at"),
     supabase.from("transactions").select("id,type,amount,note,date,deleted_at,categories(name)").eq("user_id", user.id).is("deleted_at", null).order("date", { ascending: false }).limit(6),
   ]);
-  const wallets = (walletResult.data ?? []) as WalletRow[];
+  const wallets = (walletResult.data ?? []) as WalletBalanceRow[];
   const balances = wallets.map((wallet) => ({
     accountId: wallet.account_id,
     kind: wallet.kind,
-    type: wallet.type as AccountType,
+    type: wallet.type,
     balance: Number(wallet.balance),
   }));
   const totals = getDashboardTotals(balances);
   const recent = transactionResult.data ?? [];
-  const groups = new Map<string, WalletRow[]>();
+  const groups = new Map<string, WalletBalanceRow[]>();
   wallets.forEach((wallet) => {
     const label = ACCOUNT_TYPE_LABELS[wallet.type] ?? "Lainnya";
     groups.set(label, [...(groups.get(label) ?? []), wallet]);

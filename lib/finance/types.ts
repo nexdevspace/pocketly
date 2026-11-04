@@ -45,3 +45,23 @@ export interface AccountBalance {
   type: AccountType;
   balance: number;
 }
+
+/** Raw row shape returned by the Supabase wallet_balances view (database snake_case). */
+export interface WalletBalanceRow {
+  account_id: string;
+  user_id: string;
+  kind: AccountKind;
+  type: AccountType;
+  name: string;
+  institution: string | null;
+  counterparty_name: string | null;
+  opening_balance: number;
+  opening_date: string;
+  credit_limit: number | null;
+  due_day: number | null;
+  is_default: boolean;
+  is_archived: boolean;
+  archived_at: string | null;
+  created_at: string;
+  balance: number;
+}
