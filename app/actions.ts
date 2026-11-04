@@ -17,6 +17,19 @@ function actionError(path: string, message: string): never {
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
+const TRANSFER_FEE_EDIT_ERROR = "Biaya diatur lewat transfernya";
+
+function transactionWriteError(message: string | undefined, fallback: string) {
+  if (message === LIABILITY_INCOME_ERROR) return LIABILITY_INCOME_ERROR;
+  if (
+    message?.includes(TRANSFER_FEE_EDIT_ERROR) ||
+    message?.includes("Biaya transfer hanya dapat diubah")
+  ) {
+    return TRANSFER_FEE_EDIT_ERROR;
+  }
+  return fallback;
+}
+
 function text(formData: FormData, name: string) {
   const value = formData.get(name);
   return typeof value === "string" ? value : "";
@@ -212,16 +225,31 @@ export async function saveTransactionAction(formData: FormData) {
     source: "web",
     transfer_id: null,
   };
-  const result = transactionId
-    ? await supabase.from("transactions").update(values).eq("id", transactionId).is("transfer_id", null)
-    : await supabase.from("transactions").insert(values);
-  if (result.error) {
-    actionError(
-      "/transactions",
-      result.error.message === LIABILITY_INCOME_ERROR
-        ? LIABILITY_INCOME_ERROR
-        : "Transaksi belum dapat disimpan. Periksa akun, kategori, nominal, dan tanggalnya.",
-    );
+  const saveError = "Transaksi belum dapat disimpan. Periksa akun, kategori, nominal, dan tanggalnya.";
+  if (transactionId) {
+    const { data: existing, error: lookupError } = await supabase
+      .from("transactions")
+      .select("transfer_id")
+      .eq("user_id", user.id)
+      .eq("id", transactionId)
+      .maybeSingle();
+    if (lookupError) actionError("/transactions", saveError);
+    if (!existing) actionError("/transactions", "Transaksi tidak ditemukan.");
+    if (existing.transfer_id) actionError("/transactions", TRANSFER_FEE_EDIT_ERROR);
+
+    const { data, error } = await supabase
+      .from("transactions")
+      .update(values)
+      .eq("user_id", user.id)
+      .eq("id", transactionId)
+      .is("transfer_id", null)
+      .select("id")
+      .maybeSingle();
+    if (error) actionError("/transactions", transactionWriteError(error.message, saveError));
+    if (!data) actionError("/transactions", "Transaksi tidak ditemukan atau tidak dapat diubah.");
+  } else {
+    const { error } = await supabase.from("transactions").insert(values);
+    if (error) actionError("/transactions", transactionWriteError(error.message, saveError));
   }
   redirect("/transactions?message=Transaksi berhasil disimpan.");
 }
@@ -230,12 +258,27 @@ export async function softDeleteTransactionAction(formData: FormData) {
   const id = z.string().uuid().safeParse(text(formData, "id"));
   if (!id.success) actionError("/transactions", "Transaksi tidak ditemukan.");
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const { data: existing, error: lookupError } = await supabase
+    .from("transactions")
+    .select("transfer_id")
+    .eq("user_id", user.id)
+    .eq("id", id.data)
+    .maybeSingle();
+  if (lookupError) actionError("/transactions", "Transaksi belum dapat dihapus. Muat ulang lalu coba lagi.");
+  if (!existing) actionError("/transactions", "Transaksi tidak ditemukan.");
+  if (existing.transfer_id) actionError("/transactions", TRANSFER_FEE_EDIT_ERROR);
+  const { data, error } = await supabase
     .from("transactions")
     .update({ deleted_at: new Date().toISOString() })
+    .eq("user_id", user.id)
     .eq("id", id.data)
-    .is("transfer_id", null);
-  if (error) actionError("/transactions", "Transaksi belum dapat dihapus. Muat ulang lalu coba lagi.");
+    .is("transfer_id", null)
+    .select("id")
+    .maybeSingle();
+  if (error) actionError("/transactions", transactionWriteError(error.message, "Transaksi belum dapat dihapus. Muat ulang lalu coba lagi."));
+  if (!data) actionError("/transactions", "Transaksi tidak ditemukan atau tidak dapat dihapus.");
   redirect("/transactions?message=Transaksi dipindahkan ke riwayat hapus.");
 }
 

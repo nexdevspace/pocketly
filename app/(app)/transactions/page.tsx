@@ -3,6 +3,7 @@ import { ArrowLeftRight, ArrowUpRight, ArrowDownRight, Pencil, RotateCcw, Trash2
 import { restoreTransferAction, saveTransactionAction, saveTransferAction, softDeleteTransactionAction, softDeleteTransferAction } from "@/app/actions";
 import { TransferForm } from "@/components/transfer-form";
 import { formatRupiah, getJakartaDate } from "@/lib/finance/format";
+import type { WalletBalanceRow } from "@/lib/finance/types";
 import { getAuthenticatedUser } from "@/lib/supabase/server";
 
 type Search = Promise<{ mode?: string; edit?: string; error?: string; message?: string }>;
@@ -19,7 +20,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     supabase.from("transfers").select("id,from_account_id,to_account_id,amount,fee,date,deleted_at").eq("user_id", user.id).is("deleted_at", null).order("date", { ascending: false }).limit(30),
     supabase.from("transfers").select("id,from_account_id,to_account_id,amount,fee,date,deleted_at").eq("user_id", user.id).not("deleted_at", "is", null).order("date", { ascending: false }).limit(10),
   ]);
-  const accounts = (walletResult.data ?? []) as Array<{ account_id: string; user_id: string; kind: string; type: string; name: string; balance: number; opening_date: string; is_archived: boolean }>;
+  type TransactionWalletRow = Pick<WalletBalanceRow, "account_id" | "user_id" | "kind" | "type" | "name" | "balance" | "opening_date" | "is_archived">;
+  const accounts = (walletResult.data ?? []) as TransactionWalletRow[];
   const categories = categoryResult.data ?? [];
   const transactions = transactionResult.data ?? [];
   const transfers = transferResult.data ?? [];
@@ -29,6 +31,9 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const selectedTransaction = activeMode !== "transfer" && edit
     ? (await supabase.from("transactions").select("id,type,account_id,category_id,amount,note,date").eq("user_id", user.id).eq("id", edit).is("transfer_id", null).is("deleted_at", null).maybeSingle()).data
     : null;
+  const feeEditAttempt = activeMode !== "transfer" && edit && !selectedTransaction
+    ? Boolean((await supabase.from("transactions").select("id").eq("user_id", user.id).eq("id", edit).not("transfer_id", "is", null).is("deleted_at", null).maybeSingle()).data)
+    : false;
   const selectedTransfer = activeMode === "transfer" && edit
     ? (await supabase.from("transfers").select("id,from_account_id,to_account_id,amount,fee,date").eq("user_id", user.id).eq("id", edit).is("deleted_at", null).maybeSingle()).data
     : null;
@@ -54,8 +59,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
             <h2 className="mb-4 text-lg font-bold">{selectedTransfer ? "Ubah transfer" : "Transfer antar akun"}</h2>
             <TransferForm accounts={accounts.map((account) => ({ id: account.account_id, name: account.name, kind: account.kind, type: account.type, balance: Number(account.balance) }))} action={saveTransferAction} transfer={selectedTransfer ?? undefined} />
           </> : <>
-            <h2 className="mb-4 text-lg font-bold">{selectedTransaction ? "Ubah transaksi" : formType === "income" ? "Catat pemasukan" : "Catat pengeluaran"}</h2>
-            <form action={saveTransactionAction} className="space-y-4">
+            <h2 className="mb-4 text-lg font-bold">{feeEditAttempt ? "Biaya transfer" : selectedTransaction ? "Ubah transaksi" : formType === "income" ? "Catat pemasukan" : "Catat pengeluaran"}</h2>
+            {feeEditAttempt ? <div role="alert" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100"><p>Biaya diatur lewat transfernya</p><Link className="mt-2 inline-block font-semibold underline" href="/transactions?mode=transfer">Buka tab Transfer untuk mengubah biaya.</Link></div> : <form action={saveTransactionAction} className="space-y-4">
               {selectedTransaction && <input type="hidden" name="transactionId" value={selectedTransaction.id} />}
               <input type="hidden" name="type" value={formType} />
               <div className="grid gap-4 sm:grid-cols-2">
@@ -75,7 +80,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
               </div>
               {formType === "income" && <p className="rounded-xl bg-sky-50 p-3 text-sm text-sky-900 dark:bg-sky-950 dark:text-sky-100">Pemasukan hanya masuk ke akun aset. Untuk pembayaran atau pencairan utang, gunakan tab Transfer.</p>}
               <button className="button-primary" type="submit">{selectedTransaction ? "Simpan perubahan" : "Simpan transaksi"}</button>
-            </form>
+            </form>}
           </>}
         </div>
       </section>
