@@ -108,7 +108,7 @@ select public.create_transfer(
 select is((select balance from public.wallet_balances where account_id = '10000000-0000-0000-0000-000000000003'), 1000000::bigint, 'loan disbursement increases the liability balance');
 select is(
   (select sum(case when kind = 'asset' then balance else -balance end) from public.wallet_balances),
-  current_setting('pocketly.net_worth_before')::bigint,
+  current_setting('pocketly.net_worth_before')::numeric,
   'loan disbursement leaves net worth unchanged'
 );
 
