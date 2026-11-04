@@ -13,6 +13,8 @@ Pocketly does not automatically synchronize with Indonesian banks or e-wallets. 
 
 ## Run locally
 
+For the full local Supabase setup, see [docs/setup-local.md](docs/setup-local.md). For a cloud Supabase project and GitHub-to-Vercel deployment, see [docs/deploy.md](docs/deploy.md).
+
 1. Install Node.js 20.9 or later and npm.
 2. Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from your Supabase project.
 3. Apply the SQL migration in `supabase/migrations` to the project. For local development, start the Supabase stack with `npm run db:start` (Docker is required).

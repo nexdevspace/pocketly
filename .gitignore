@@ -9,7 +9,7 @@
 /build/
 *.tsbuildinfo
 
-# local environment
+# local environment files, including .env.local; keep only the safe template tracked
 .env*
 !.env.example
 
