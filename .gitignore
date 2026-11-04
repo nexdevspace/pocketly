@@ -1,0 +1,28 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# Next.js
+/.next/
+/out/
+/build/
+*.tsbuildinfo
+
+# local environment
+.env*
+!.env.example
+
+# Supabase local state
+/supabase/.temp/
+
+# test artifacts
+/coverage/
+/playwright-report/
+/test-results/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

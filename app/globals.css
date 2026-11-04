@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --emerald: #059669;
+  --emerald-deep: #047857;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --wash: #f8fafc;
+  --panel: #ffffff;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--wash); }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--wash);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button, input, select { font: inherit; }
+
+.surface {
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  background: var(--panel);
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.035);
+}
+.field {
+  width: 100%;
+  min-height: 2.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: .8rem;
+  background: white;
+  padding: .7rem .85rem;
+  color: var(--ink);
+  outline: none;
+}
+.field:focus { border-color: var(--emerald); box-shadow: 0 0 0 3px rgb(5 150 105 / .12); }
+.button-primary {
+  display: inline-flex;
+  min-height: 2.85rem;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border: 0;
+  border-radius: .8rem;
+  background: var(--emerald);
+  padding: .7rem 1rem;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+.button-primary:hover { background: var(--emerald-deep); transform: translateY(-1px); }
+.button-secondary {
+  display: inline-flex;
+  min-height: 2.65rem;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  border: 1px solid var(--line);
+  border-radius: .8rem;
+  background: white;
+  padding: .55rem .85rem;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+}
+.button-danger {
+  border: 1px solid #fecaca;
+  border-radius: .7rem;
+  background: #fff7f7;
+  padding: .48rem .7rem;
+  color: #b91c1c;
+  font-weight: 600;
+  cursor: pointer;
+}
+.section-label { color: var(--muted); font-size: .76rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.balance-number { font-variant-numeric: tabular-nums; letter-spacing: -.035em; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --ink: #e2e8f0;
+    --muted: #94a3b8;
+    --line: #263449;
+    --wash: #0b1220;
+    --panel: #111c2e;
+  }
+  html, body { background: var(--wash); }
+  .field, .button-secondary { border-color: #334155; background: #0f172a; color: #e2e8f0; }
+  .button-danger { border-color: #7f1d1d; background: #2a1218; color: #fca5a5; }
+}
